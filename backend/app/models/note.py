@@ -1,11 +1,15 @@
 import uuid
 from datetime import datetime
-from typing import Optional, List
+from typing import Optional, List, TYPE_CHECKING
 from sqlalchemy import String, Text, Boolean, DateTime, ForeignKey, Index
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import UUID
 
 from app.core.database import Base
+
+if TYPE_CHECKING:
+    from app.models.user import User
+
 
 class Folder(Base):
     __tablename__ = "folders"
@@ -13,14 +17,18 @@ class Folder(Base):
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True
     )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
     name: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
     color: Mapped[Optional[str]] = mapped_column(String(7), nullable=True)
-    
+
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
     )
 
+    owner: Mapped["User"] = relationship("User", back_populates="folders")
     notes: Mapped[List["Note"]] = relationship(
         "Note", back_populates="folder", cascade="all, delete-orphan"
     )
@@ -32,19 +40,23 @@ class Note(Base):
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True
     )
-    title: Mapped[Optional[str]] = mapped_column(String(255), nullable=True) # Tambah title
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    title: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     content: Mapped[str] = mapped_column(Text, nullable=False, default="")
     is_pinned: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
-    
+
     folder_id: Mapped[Optional[uuid.UUID]] = mapped_column(
         UUID(as_uuid=True), ForeignKey("folders.id", ondelete="SET NULL"), nullable=True, index=True
     )
-    
+
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
     )
 
+    owner: Mapped["User"] = relationship("User", back_populates="notes")
     folder: Mapped[Optional["Folder"]] = relationship("Folder", back_populates="notes")
 
 

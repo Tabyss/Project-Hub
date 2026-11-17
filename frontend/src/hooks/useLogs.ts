@@ -2,17 +2,19 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import api from "../services/api";
 import type { Log } from "../types";
 import { useViewModeStore } from "../store/viewModeStore";
+import { useAuth } from "../context/AuthContext";
 
 export const useLogs = (projectId: string) => {
     const { mode } = useViewModeStore();
+    const { user, isAuthenticated } = useAuth();
 
     return useQuery({
-        queryKey: ["logs", projectId],
+        queryKey: ["logs", user?.id ?? "guest", projectId],
         queryFn: async (): Promise<Log[]> => {
             const { data } = await api.get(`/logs/${projectId}`);
             return data;
         },
-        enabled: !!projectId && mode === "devdocs",
+        enabled: !!projectId && isAuthenticated && mode === "devdocs",
     });
 };
 
@@ -25,7 +27,7 @@ export const useCreateLog = (projectId: string) => {
             return data;
         },
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["logs", projectId] });
+            queryClient.invalidateQueries({ queryKey: ["logs"] });
             queryClient.invalidateQueries({ queryKey: ["project"] });
         },
     });

@@ -19,6 +19,7 @@ interface NoteState {
 
     setSelectedFolderId: (folderId: string | null) => void;
     setSearchQuery: (query: string) => void;
+    resetStore: () => void;
 
     fetchFolders: () => Promise<void>;
     createFolder: (data: FolderCreateInput) => Promise<Folder | undefined>;
@@ -39,6 +40,16 @@ export const useNoteStore = create<NoteState>((set, get) => ({
     searchQuery: "",
     isLoading: false,
     error: null,
+
+    resetStore: () =>
+        set({
+            notes: [],
+            folders: [],
+            selectedFolderId: null,
+            searchQuery: "",
+            isLoading: false,
+            error: null,
+        }),
 
     setSelectedFolderId: (folderId) => {
         set({ selectedFolderId: folderId });

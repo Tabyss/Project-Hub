@@ -1,4 +1,4 @@
-import { Tag, Plus, Search, Loader2, Pin, Trash2 } from "lucide-react";
+import { Tag, Plus, Search, Loader2, Pin, Trash2, Lock } from "lucide-react";
 import { useState, useEffect } from "react";
 import Modal from "../../../components/common/Modal";
 import NotebookEditor from "../../../components/forms/NotebookEditor";
@@ -22,9 +22,10 @@ export default function Board() {
         updateNote,
         createFolder,
         deleteFolder,
+        resetStore,
     } = useNoteStore();
 
-    const { isAuthenticated, openLoginModal } = useAuth();
+    const { user, isAuthenticated, openLoginModal } = useAuth();
     const [activeNote, setActiveNote] = useState<Note | null>(null);
     const [isEditorModalOpen, setIsEditorModalOpen] = useState(false);
     const [isCreatingFolder, setIsCreatingFolder] = useState(false);
@@ -32,21 +33,48 @@ export default function Board() {
     const [newFolderColor, setNewFolderColor] = useState("#3B82F6");
 
     useEffect(() => {
-        fetchFolders();
-        fetchNotes();
-    }, [fetchFolders, fetchNotes]);
-
-    useEffect(() => {
-        if (folders.length > 0 && selectedFolderId === null) {
-            setSelectedFolderId(folders[0].id);
-        }
-    }, [folders, selectedFolderId, setSelectedFolderId]);
-
-    const handleManualSaveNewNote = async (title: string, content: string) => {
-        if (!isAuthenticated) {
-            openLoginModal();
+        if (!isAuthenticated || !user?.id) {
+            resetStore();
             return;
         }
+        fetchFolders();
+        fetchNotes();
+    }, [isAuthenticated, user?.id, fetchFolders, fetchNotes, resetStore]);
+
+    useEffect(() => {
+        if (
+            isAuthenticated &&
+            folders.length > 0 &&
+            selectedFolderId === null
+        ) {
+            setSelectedFolderId(folders[0].id);
+        }
+    }, [isAuthenticated, folders, selectedFolderId, setSelectedFolderId]);
+
+    if (!isAuthenticated) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[60vh] px-4 text-center">
+                <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-600 mb-4">
+                    <Lock size={24} />
+                </div>
+                <h3 className="text-lg font-bold text-slate-900 mb-1">
+                    Workspace Catatan Pribadi
+                </h3>
+                <p className="text-sm text-slate-500 max-w-md mb-5">
+                    Masuk ke akun Anda untuk melihat, membuat, dan mengelola
+                    folder serta catatan pribadi Anda.
+                </p>
+                <button
+                    onClick={openLoginModal}
+                    className="px-5 py-2.5 bg-slate-900 text-white text-sm font-semibold rounded-xl hover:bg-slate-800 transition-colors"
+                >
+                    Masuk / Daftar Akun
+                </button>
+            </div>
+        );
+    }
+
+    const handleManualSaveNewNote = async (title: string, content: string) => {
         await createNote({
             title: title || null,
             content,
@@ -90,19 +118,15 @@ export default function Board() {
                             <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
                                 <Tag size={14} /> Folders
                             </h3>
-                            {isAuthenticated && (
-                                <button
-                                    onClick={() => setIsCreatingFolder(true)}
-                                    className="p-1 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded"
-                                    title="Add Folder"
-                                >
-                                    <Plus size={16} />
-                                </button>
-                            )}
+                            <button
+                                onClick={() => setIsCreatingFolder(true)}
+                                className="p-1 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded"
+                                title="Add Folder"
+                            >
+                                <Plus size={16} />
+                            </button>
                         </div>
 
-                        {/* Scrollable Folder List */}
-                        {/* Mobile: horizontal scroll | Desktop: vertical scroll with max-height */}
                         <div className="flex md:flex-col overflow-x-auto md:overflow-x-hidden md:overflow-y-auto md:max-h-80 gap-2 md:gap-1 pb-2 md:pb-0 scrollbar-none pr-0 md:pr-1">
                             {folders.map((folder: Folder) => (
                                 <div
@@ -134,26 +158,23 @@ export default function Board() {
                                     </span>
 
                                     <div className="flex items-center gap-1 shrink-0">
-                                        {isAuthenticated && (
-                                            <button
-                                                onClick={(e) =>
-                                                    handleDeleteFolder(
-                                                        e,
-                                                        folder.id,
-                                                        folder.name,
-                                                    )
-                                                }
-                                                className={`p-1 rounded opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity ${
-                                                    selectedFolderId ===
-                                                    folder.id
-                                                        ? "text-slate-400 hover:text-red-400 hover:bg-slate-800"
-                                                        : "text-slate-400 hover:text-red-600 hover:bg-slate-200"
-                                                }`}
-                                                title="Delete Folder"
-                                            >
-                                                <Trash2 size={13} />
-                                            </button>
-                                        )}
+                                        <button
+                                            onClick={(e) =>
+                                                handleDeleteFolder(
+                                                    e,
+                                                    folder.id,
+                                                    folder.name,
+                                                )
+                                            }
+                                            className={`p-1 rounded opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity ${
+                                                selectedFolderId === folder.id
+                                                    ? "text-slate-400 hover:text-red-400 hover:bg-slate-800"
+                                                    : "text-slate-400 hover:text-red-600 hover:bg-slate-200"
+                                            }`}
+                                            title="Delete Folder"
+                                        >
+                                            <Trash2 size={13} />
+                                        </button>
 
                                         <span
                                             className={`text-xs px-2 py-0.5 rounded-full font-semibold ${
@@ -206,7 +227,6 @@ export default function Board() {
                     </div>
                 )}
 
-                {/* Section Pinned Notes */}
                 {!isLoading && pinnedNotes.length > 0 && (
                     <section className="space-y-2">
                         <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
@@ -227,7 +247,6 @@ export default function Board() {
                     </section>
                 )}
 
-                {/* Section Other Notes */}
                 {!isLoading && otherNotes.length > 0 && (
                     <section className="space-y-2">
                         {pinnedNotes.length > 0 && (
@@ -251,7 +270,6 @@ export default function Board() {
                 )}
             </main>
 
-            {/* Modal Edit Note */}
             <Modal
                 isOpen={isEditorModalOpen}
                 onClose={() => setIsEditorModalOpen(false)}
@@ -267,7 +285,6 @@ export default function Board() {
                 )}
             </Modal>
 
-            {/* Modal Folder Baru */}
             <Modal
                 isOpen={isCreatingFolder}
                 onClose={() => setIsCreatingFolder(false)}

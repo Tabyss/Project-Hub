@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useDeleteProject, useProject } from "../../../../hooks/useProjects";
 import { useViewModeStore } from "../../../../store/viewModeStore";
+import { useAuth } from "../../../../context/AuthContext";
 import { Loader2 } from "lucide-react";
 import Modal from "../../../../components/common/Modal";
 import ProjectForm from "../../../../components/forms/ProjectForm";
@@ -17,6 +18,7 @@ export default function ProjectDetailPage() {
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const { mutate: deleteProject } = useDeleteProject();
     const { mode } = useViewModeStore();
+    const { user, isAuthenticated } = useAuth();
 
     if (isLoading) {
         return (
@@ -29,12 +31,17 @@ export default function ProjectDetailPage() {
     if (isError || !project) {
         return (
             <div className="text-center py-20 text-red-500">
-                Proyek tidak ditemukan atau terjadi kesalahan server.
+                Proyek tidak ditemukan atau Anda tidak memiliki akses.
             </div>
         );
     }
 
+    const isOwner =
+        isAuthenticated && (!project.user_id || user?.id === project.user_id);
+    const effectiveMode = isOwner ? mode : "portfolio";
+
     const handleDelete = () => {
+        if (!isOwner) return;
         if (
             window.confirm(
                 "Apakah Anda yakin ingin menghapus proyek ini selamanya? Semua rencana dan changelog juga akan terhapus!",
@@ -47,7 +54,7 @@ export default function ProjectDetailPage() {
     };
 
     const activeContent =
-        mode === "portfolio"
+        effectiveMode === "portfolio"
             ? project.portfolio_content || ""
             : project.documentation_content || "";
 
@@ -55,7 +62,7 @@ export default function ProjectDetailPage() {
         <div className="px-4 py-10 max-w-7xl mx-auto">
             <ProjectHeader
                 project={project}
-                mode={mode}
+                mode={effectiveMode}
                 onDelete={handleDelete}
             />
 
@@ -71,27 +78,29 @@ export default function ProjectDetailPage() {
 
             <div className="flex gap-12 items-start relative">
                 <div className="flex-1 min-w-0 prose-content-area prose prose-slate prose-lg max-w-none">
-                    {mode === "portfolio" && (
+                    {effectiveMode === "portfolio" && (
                         <ProjectPortfolioContent project={project} />
                     )}
-                    {mode === "devdocs" && (
+                    {effectiveMode === "devdocs" && (
                         <ProjectDevDocsContent project={project} />
                     )}
                 </div>
 
-                <TableOfContents contentDependency={activeContent + mode} />
+                <TableOfContents contentDependency={activeContent + effectiveMode} />
             </div>
 
-            <Modal
-                isOpen={isEditModalOpen}
-                onClose={() => setIsEditModalOpen(false)}
-                title="Edit Project"
-            >
-                <ProjectForm
-                    initialData={project}
-                    onSuccess={() => setIsEditModalOpen(false)}
-                />
-            </Modal>
+            {isOwner && (
+                <Modal
+                    isOpen={isEditModalOpen}
+                    onClose={() => setIsEditModalOpen(false)}
+                    title="Edit Project"
+                >
+                    <ProjectForm
+                        initialData={project}
+                        onSuccess={() => setIsEditModalOpen(false)}
+                    />
+                </Modal>
+            )}
         </div>
     );
 }

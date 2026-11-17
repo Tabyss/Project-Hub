@@ -1,3 +1,4 @@
+import os
 from typing import List
 from pydantic import computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -20,27 +21,40 @@ class Settings(BaseSettings):
     @computed_field
     @property
     def ASYNC_DATABASE_URL(self) -> str:
-        if self.DATABASE_URL:
-            return self.DATABASE_URL
-        
-        return f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_SERVER}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
+        env_url = os.getenv("DATABASE_URL")
+        if env_url:
+            return env_url
+        return (
+            f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}"
+            f"@{self.POSTGRES_SERVER}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
+        )
+
+    @property
+    def DATABASE_URL(self) -> str:
+        """Alias langsung agar settings.DATABASE_URL di database.py selalu terbaca."""
+        return self.ASYNC_DATABASE_URL
 
     SECRET_KEY: str
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 11520
 
+    ADMIN_REGISTER_SECRET: str | None = None
     ADMIN_USERNAME: str = "admin"
-    ADMIN_PASSWORD_HASH: str
+    ADMIN_PASSWORD_HASH: str | None = None
 
     ALLOWED_ORIGINS: str = "http://localhost:5173"
 
     @property
     def cors_origins(self) -> List[str]:
-        return [origin.strip() for origin in self.ALLOWED_ORIGINS.split(",") if origin.strip()]
+        return [
+            origin.strip()
+            for origin in self.ALLOWED_ORIGINS.split(",")
+            if origin.strip()
+        ]
 
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
-        extra="ignore"
+        extra="ignore",
     )
 
 

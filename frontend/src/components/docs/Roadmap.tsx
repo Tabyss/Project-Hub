@@ -6,7 +6,7 @@ import Modal from "../common/Modal";
 
 export default function Roadmap({ projectId }: { projectId: string }) {
     const { data: plans, isLoading } = usePlans(projectId);
-    const { mutate: togglePlan, isPending } = useTogglePlan(projectId);
+    const { mutate: togglePlan, isPending } = useTogglePlan();
     const [isModalOpen, setIsModalOpen] = useState(false);
 
     if (isLoading) {

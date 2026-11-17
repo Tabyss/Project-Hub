@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useProjects, useProjectFiltersOptions } from "../../hooks/useProjects";
 import { useViewModeStore } from "../../store/viewModeStore";
 import { useAuth } from "../../context/AuthContext";
@@ -17,7 +17,7 @@ import { Link } from "react-router-dom";
 
 export default function ProjectPage() {
     const { mode, setMode } = useViewModeStore();
-    const { isAuthenticated, openLoginModal } = useAuth();
+    const { user, isAuthenticated, openLoginModal } = useAuth();
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [filters, setFilters] = useState({
@@ -26,6 +26,16 @@ export default function ProjectPage() {
         visibility: "",
         is_favorite: "",
     });
+
+    // Reset filter ketika berganti akun atau logout
+    useEffect(() => {
+        setFilters({
+            category: "",
+            tool: "",
+            visibility: "",
+            is_favorite: "",
+        });
+    }, [user?.id]);
 
     const { data: filterOptions } = useProjectFiltersOptions();
 
@@ -77,7 +87,7 @@ export default function ProjectPage() {
                     <h2 className="text-3xl md:text-4xl font-extrabold text-slate-900 mb-2 tracking-tight">
                         {mode === "portfolio" && !isAuthenticated
                             ? "Featured Work & Projects"
-                            : "Engineering Workspace"}
+                            : `${user?.username ? `${user.username}'s` : "Engineering"} Workspace`}
                     </h2>
                 </div>
                 <div className="flex flex-col items-end gap-2 shrink-0">

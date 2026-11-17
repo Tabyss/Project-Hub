@@ -17,6 +17,7 @@ export type LogType =
 
 export interface Project {
     id: string;
+    user_id?: string;
     title: string;
     slug: string;
     tagline: string;
