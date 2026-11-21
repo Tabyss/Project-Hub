@@ -5,3 +5,4 @@ from .plan import ProjectPlan
 from .log import ProjectLog, LogAttachment
 from .note import Folder, Note
 from .user import User
+from .bookmark import Bookmark, BookmarkCategory, BookmarkCheckpoint

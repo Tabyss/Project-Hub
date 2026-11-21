@@ -1,8 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import api from '../services/api';
-import type { Project } from '../types';
-import { useViewModeStore } from '../store/viewModeStore';
-import { useAuth } from '../context/AuthContext';
+import api from '../../services/api';
+import type { Project } from '../../types';
+import { useViewModeStore } from '../../store/viewModeStore';
+import { useAuth } from '../../context/AuthContext';
 
 interface ProjectFilters {
     category?: string;

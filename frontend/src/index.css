@@ -3,4 +3,30 @@
 @theme {
     --font-sans: "Inter", sans-serif;
     --font-custom: "Inter", sans-serif;
+    --color-shell: #f3f2f0;
+    --color-canvas: #ffffff;
+    --color-surface: #f8f8f7;
+    --color-surface-hover: #efece9;
+    --color-coral: #e13b5a;
+    --color-coral-soft: #fcebef;
+    --color-ink: #141414;
+    --color-ink-muted: #787774;
+    --color-ink-subtle: #b4b3b0;
+    --color-line: #e8e7e4;
+}
+
+@layer base {
+    body {
+        background-color: #f3f2f0;
+        color: #141414;
+        -webkit-font-smoothing: antialiased;
+    }
+}
+
+.scrollbar-none::-webkit-scrollbar {
+    display: none;
+}
+.scrollbar-none {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
 }

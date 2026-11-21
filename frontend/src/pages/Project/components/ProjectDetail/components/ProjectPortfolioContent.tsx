@@ -1,46 +1,40 @@
-import ReactMarkdown from "react-markdown";
 import type { Project } from "../../../../../types";
-import { markdownComponents } from "../../../../../components/common/MarkdownHeadings";
+import MarkdownRenderer from "./MarkdownRenderer";
 
-interface ProjectPortfolioContentProps {
-    project: Project;
-}
-
-export default function ProjectPortfolioContent({
-    project,
-}: ProjectPortfolioContentProps) {
+export default function PortfolioContent({ project }: { project: Project }) {
     return (
-        <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div className="space-y-12">
             {project.media_urls && project.media_urls.length > 0 && (
-                <div className="mt-12 pt-8 border-t border-slate-200">
-                    <h3 className="text-2xl font-bold text-slate-900 mb-6">
+                <section className="pt-6 border-t border-line">
+                    <h3 className="text-xl font-bold text-ink mb-5">
                         Project Gallery
                     </h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                         {project.media_urls.map((url, idx) => (
-                            <div
+                            <a
                                 key={idx}
-                                className="w-full h-48 bg-slate-100 rounded-xl overflow-hidden border border-slate-200 shadow-sm hover:shadow-md transition-shadow"
+                                href={url}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="block w-full h-48 bg-surface rounded-2xl overflow-hidden border border-line group"
                             >
                                 <img
                                     src={url}
                                     alt={`Screenshot ${idx + 1}`}
-                                    className="w-full h-full object-cover cursor-pointer hover:scale-105 transition-transform duration-500"
-                                    onClick={() => window.open(url, "_blank")}
+                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                                 />
-                            </div>
+                            </a>
                         ))}
                     </div>
-                </div>
+                </section>
             )}
+
             {project.portfolio_content ? (
                 <section>
-                    <ReactMarkdown components={markdownComponents}>
-                        {project.portfolio_content}
-                    </ReactMarkdown>
+                    <MarkdownRenderer content={project.portfolio_content} />
                 </section>
             ) : (
-                <p className="text-slate-400 italic">
+                <p className="text-ink-muted text-sm italic">
                     Belum ada konten cerita portofolio yang ditambahkan.
                 </p>
             )}

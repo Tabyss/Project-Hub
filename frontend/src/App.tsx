@@ -1,12 +1,9 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import ProjectPage from "./pages/Project/ProjectPage";
-import ProjectDetailPage from "./pages/Project/components/ProjectDetail/ProjectDetailPage";
 import Header from "./components/Header";
-import ProjectFormPage from "./pages/Project/components/ProjectForm/ProjectFormPage";
 import LoginModal from "./components/auth/LoginModal";
 import { useAuth } from "./context/AuthContext";
 import { useViewModeStore } from "./store/viewModeStore";
-import Board from "./pages/Notes/components/Board";
+import { APP_MODULES } from "./config/modules";
 
 function App() {
     const { isLoginModalOpen, closeLoginModal } = useAuth();
@@ -15,30 +12,39 @@ function App() {
     const handleLoginSuccess = () => {
         setMode("devdocs");
     };
+
     return (
         <>
             <Router>
-                <div className="bg-slate-50">
-                    <Header />
-                    <main>
-                        <Routes>
-                            <Route path="/" element={<ProjectPage />} />
-                            <Route
-                                path="/project/:slug"
-                                element={<ProjectDetailPage />}
-                            />
-                            <Route
-                                path="/project/new"
-                                element={<ProjectFormPage />}
-                            />
-                            <Route
-                                path="/project/edit/:slug"
-                                element={<ProjectFormPage />}
-                            />
-                            <Route path="/notes" element={<Board />} />
-                        </Routes>
-                    </main>
-                </div>
+                <Header>
+                    <Routes>
+                        {APP_MODULES.flatMap((mod) => {
+                            const MainPage = mod.element;
+                            const routes = [
+                                <Route
+                                    key={mod.path}
+                                    path={mod.path}
+                                    element={<MainPage />}
+                                />,
+                            ];
+
+                            if (mod.subRoutes) {
+                                for (const sub of mod.subRoutes) {
+                                    const SubPage = sub.element;
+                                    routes.push(
+                                        <Route
+                                            key={sub.path}
+                                            path={sub.path}
+                                            element={<SubPage />}
+                                        />,
+                                    );
+                                }
+                            }
+
+                            return routes;
+                        })}
+                    </Routes>
+                </Header>
             </Router>
             <LoginModal
                 isOpen={isLoginModalOpen}

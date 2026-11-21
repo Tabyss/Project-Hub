@@ -1,55 +1,44 @@
-import { useState, useEffect } from "react";
-import { useProjects, useProjectFiltersOptions } from "../../hooks/useProjects";
-import { useViewModeStore } from "../../store/viewModeStore";
-import { useAuth } from "../../context/AuthContext";
-import ProjectCard from "../../components/portfolio/ProjectCard";
-import Modal from "../../components/common/Modal";
-import ProjectForm from "../../components/forms/ProjectForm";
-import {
-    Loader2,
-    AlertCircle,
-    Plus,
-    LayoutTemplate,
-    Code,
-    FilterX,
-} from "lucide-react";
+import { useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
+import { Loader2, AlertCircle, Plus, LayoutTemplate, Code } from "lucide-react";
+import { useAuth } from "../../context/AuthContext";
+import { useProjects } from "../../hooks/queries/useProjects";
+import { useViewModeStore } from "../../store/viewModeStore";
+import { useWorkspaceStore } from "../../store/workspaceStore";
+import { DsButton } from "../DesignSystem/DesignSystemPage";
+import ProjectCard from "./components/ProjectCard";
 
-export default function ProjectPage() {
+export default function ProjectListPage() {
     const { mode, setMode } = useViewModeStore();
     const { user, isAuthenticated, openLoginModal } = useAuth();
+    const { projectFilters, resetProjectFilters } = useWorkspaceStore();
 
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [filters, setFilters] = useState({
-        category: "",
-        tool: "",
-        visibility: "",
-        is_favorite: "",
-    });
-
-    // Reset filter ketika berganti akun atau logout
     useEffect(() => {
-        setFilters({
-            category: "",
-            tool: "",
-            visibility: "",
-            is_favorite: "",
-        });
-    }, [user?.id]);
+        resetProjectFilters();
+    }, [user?.id, resetProjectFilters]);
 
-    const { data: filterOptions } = useProjectFiltersOptions();
-
-    const activeFilters = {
-        ...(filters.category && { category: filters.category }),
-        ...(filters.tool && { tool: filters.tool }),
-        ...(filters.visibility &&
-            mode === "devdocs" && { visibility: filters.visibility }),
-        ...(filters.is_favorite !== "" && {
-            is_favorite: filters.is_favorite === "true",
+    const activeFilters = useMemo(
+        () => ({
+            ...(projectFilters.category && {
+                category: projectFilters.category,
+            }),
+            ...(projectFilters.tool && { tool: projectFilters.tool }),
+            ...(projectFilters.visibility &&
+                mode === "devdocs" && {
+                    visibility: projectFilters.visibility,
+                }),
+            ...(projectFilters.is_favorite !== "" && {
+                is_favorite: projectFilters.is_favorite === "true",
+            }),
         }),
-    };
+        [projectFilters, mode],
+    );
 
-    const { data: projects, isLoading, isError } = useProjects(activeFilters);
+    const {
+        data: projects = [],
+        isLoading,
+        isError,
+    } = useProjects(activeFilters);
 
     const handleModeToggle = () => {
         if (mode === "portfolio") {
@@ -66,156 +55,78 @@ export default function ProjectPage() {
     if (isLoading) {
         return (
             <div className="flex items-center justify-center min-h-[50vh]">
-                <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+                <Loader2 className="w-8 h-8 animate-spin text-coral" />
             </div>
         );
     }
 
     if (isError) {
         return (
-            <div className="flex flex-col items-center justify-center min-h-[50vh] text-red-500 gap-2">
+            <div className="flex flex-col items-center justify-center min-h-[50vh] text-coral gap-2">
                 <AlertCircle size={32} />
-                <p>Gagal memuat data dari server. Pastikan backend menyala.</p>
+                <p className="text-sm font-medium">
+                    Gagal memuat data dari server. Pastikan backend menyala.
+                </p>
             </div>
         );
     }
 
+    const pageTitle =
+        mode === "portfolio" && !isAuthenticated
+            ? "Featured Projects"
+            : `${user?.username ? `${user.username}'s` : "Engineering"} Projects`;
+
     return (
-        <div className="px-7 py-6">
-            <div className="flex justify-between items-start mb-2">
-                <div>
-                    <h2 className="text-3xl md:text-4xl font-extrabold text-slate-900 mb-2 tracking-tight">
-                        {mode === "portfolio" && !isAuthenticated
-                            ? "Featured Work & Projects"
-                            : `${user?.username ? `${user.username}'s` : "Engineering"} Workspace`}
-                    </h2>
-                </div>
-                <div className="flex flex-col items-end gap-2 shrink-0">
-                    <div className="flex items-center gap-2">
-                        {mode === "devdocs" && isAuthenticated && (
-                            <Link
-                                to="/project/new"
-                                className="h-10 w-10 inline-flex justify-center items-center gap-2 bg-slate-900 text-white text-sm rounded-full font-semibold hover:bg-slate-800 transition-colors"
-                            >
-                                <Plus size={20} />
-                            </Link>
-                        )}
-                        <button
-                            onClick={handleModeToggle}
-                            className={`flex justify-between items-center gap-2 w-[150px] px-4 py-2 rounded-full text-sm font-semibold transition-all ${
-                                mode === "portfolio"
-                                    ? "bg-blue-50 text-blue-700 hover:bg-blue-100"
-                                    : "bg-slate-900 text-slate-100 hover:bg-slate-800"
-                            }`}
-                        >
-                            {mode === "portfolio" ? "Porto Mode" : "Dev Mode"}
-                            {mode === "portfolio" ? (
-                                <LayoutTemplate size={16} />
-                            ) : (
-                                <Code size={16} />
-                            )}
-                        </button>
-                    </div>
-                </div>
-            </div>
+        <div className="space-y-6">
+            {/* Header */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-ink">
+                    {pageTitle}
+                </h1>
 
-            {/* BARIS FILTER */}
-            <div className="flex flex-wrap items-center gap-3 mb-8 bg-white p-4 rounded-xl border border-slate-200">
-                <select
-                    value={filters.category}
-                    onChange={(e) =>
-                        setFilters({ ...filters, category: e.target.value })
-                    }
-                    className="px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                    <option value="">All Categories</option>
-                    {filterOptions?.categories?.map((cat) => (
-                        <option key={cat} value={cat}>
-                            {cat}
-                        </option>
-                    ))}
-                </select>
-
-                <select
-                    value={filters.tool}
-                    onChange={(e) =>
-                        setFilters({ ...filters, tool: e.target.value })
-                    }
-                    className="px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                    <option value="">All Tools</option>
-                    {filterOptions?.tools?.map((tool) => (
-                        <option key={tool} value={tool}>
-                            {tool}
-                        </option>
-                    ))}
-                </select>
-
-                <select
-                    value={filters.is_favorite}
-                    onChange={(e) =>
-                        setFilters({ ...filters, is_favorite: e.target.value })
-                    }
-                    className="px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                    <option value="">All Status</option>
-                    <option value="true">Favorite / Featured</option>
-                    <option value="false">Regular</option>
-                </select>
-
-                {mode === "devdocs" && isAuthenticated && (
-                    <select
-                        value={filters.visibility}
-                        onChange={(e) =>
-                            setFilters({
-                                ...filters,
-                                visibility: e.target.value,
-                            })
-                        }
-                        className="px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
+                <div className="flex items-center gap-2.5">
+                    <button
+                        type="button"
+                        onClick={handleModeToggle}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                            mode === "portfolio"
+                                ? "bg-surface text-ink border border-line hover:bg-surface-hover"
+                                : "bg-ink text-canvas"
+                        }`}
                     >
-                        <option value="">All Visibility</option>
-                        <option value="Public">Public</option>
-                        <option value="Private">Private</option>
-                    </select>
-                )}
+                        {mode === "portfolio" ? (
+                            <>
+                                <LayoutTemplate size={14} /> Porto Mode
+                            </>
+                        ) : (
+                            <>
+                                <Code size={14} /> DevDocs Mode
+                            </>
+                        )}
+                    </button>
 
-                <button
-                    onClick={() =>
-                        setFilters({
-                            category: "",
-                            tool: "",
-                            visibility: "",
-                            is_favorite: "",
-                        })
-                    }
-                    className="p-2 text-slate-500 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors ml-auto flex items-center gap-1 text-sm font-medium"
-                >
-                    <FilterX size={16} /> Reset
-                </button>
+                    {mode === "devdocs" && isAuthenticated && (
+                        <Link to="/project/new">
+                            <DsButton variant="coral">
+                                <Plus size={15} /> New Project
+                            </DsButton>
+                        </Link>
+                    )}
+                </div>
             </div>
 
-            {/* GRID PROJECT */}
-            {!projects || projects.length === 0 ? (
-                <div className="text-center py-20 text-slate-500 bg-white rounded-xl border border-dashed border-slate-300">
-                    Belum ada proyek yang cocok dengan filter.
+            {/* Project Grid */}
+            {projects.length === 0 ? (
+                <div className="text-center py-20 text-ink-muted text-xs bg-surface rounded-[24px] border border-dashed border-line">
+                    Belum ada proyek yang cocok dengan filter di sidebar.
                 </div>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                     {projects.map((project) => (
                         <ProjectCard key={project.id} project={project} />
                     ))}
                 </div>
             )}
-
-            {/* MODAL BUAT PROJECT */}
-            <Modal
-                isOpen={isModalOpen}
-                onClose={() => setIsModalOpen(false)}
-                title="Buat Project Baru"
-            >
-                <ProjectForm onSuccess={() => setIsModalOpen(false)} />
-            </Modal>
         </div>
     );
 }

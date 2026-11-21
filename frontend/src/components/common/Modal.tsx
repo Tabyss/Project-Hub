@@ -1,34 +1,32 @@
-import { X } from 'lucide-react';
-import type { ReactNode } from 'react';
+import React from "react";
+import { X } from "lucide-react";
 
 interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
   title: string;
-  children: ReactNode;
+  children: React.ReactNode;
 }
 
 export default function Modal({ isOpen, onClose, title, children }: ModalProps) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200">
-      <div 
-        className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between p-5 border-b border-slate-100">
-          <h3 className="text-xl font-bold text-slate-900">{title}</h3>
-          <button 
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 backdrop-blur-xs p-4">
+      <div className="bg-white rounded-[28px] w-full max-w-lg p-6 md:p-7 shadow-xl border border-line relative max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between mb-4 pb-3 border-b border-line">
+          <h3 className="text-lg font-bold tracking-tight text-ink">
+            {title}
+          </h3>
+          <button
+            type="button"
             onClick={onClose}
-            className="p-1 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+            className="w-8 h-8 rounded-full bg-shell hover:bg-[#E8E7E4] text-ink flex items-center justify-center transition-colors cursor-pointer"
           >
-            <X size={20} />
+            <X size={15} />
           </button>
         </div>
-        <div className="p-5">
-          {children}
-        </div>
+        {children}
       </div>
     </div>
   );

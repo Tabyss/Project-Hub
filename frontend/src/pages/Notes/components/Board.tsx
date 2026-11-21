@@ -1,10 +1,16 @@
-import { Tag, Plus, Search, Loader2, Pin, Trash2, Lock } from "lucide-react";
-import { useState, useEffect } from "react";
+import { Search, Loader2, Pin, Lock } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
 import Modal from "../../../components/common/Modal";
-import NotebookEditor from "../../../components/forms/NotebookEditor";
+import NotebookEditor from "./NotebookEditor";
 import { useAuth } from "../../../context/AuthContext";
 import { useNoteStore } from "../../../store/noteStore";
-import type { Note, Folder } from "../../../types";
+import { useWorkspaceStore } from "../../../store/workspaceStore";
+import {
+    DsButton,
+    DsInput,
+    DsStatCard,
+} from "../../DesignSystem/DesignSystemPage";
+import type { Note } from "../../../types";
 import NoteCard from "./NoteCard";
 
 export default function Board() {
@@ -14,23 +20,24 @@ export default function Board() {
         selectedFolderId,
         searchQuery,
         isLoading,
-        setSelectedFolderId,
         setSearchQuery,
         fetchNotes,
         fetchFolders,
         createNote,
         updateNote,
         createFolder,
-        deleteFolder,
         resetStore,
     } = useNoteStore();
 
+    const { activeQuickModal, triggerQuickModal } = useWorkspaceStore();
     const { user, isAuthenticated, openLoginModal } = useAuth();
+
     const [activeNote, setActiveNote] = useState<Note | null>(null);
     const [isEditorModalOpen, setIsEditorModalOpen] = useState(false);
     const [isCreatingFolder, setIsCreatingFolder] = useState(false);
     const [newFolderName, setNewFolderName] = useState("");
-    const [newFolderColor, setNewFolderColor] = useState("#3B82F6");
+    const [newFolderColor, setNewFolderColor] = useState("#E13B5A");
+    const editorContainerRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         if (!isAuthenticated || !user?.id) {
@@ -41,35 +48,33 @@ export default function Board() {
         fetchNotes();
     }, [isAuthenticated, user?.id, fetchFolders, fetchNotes, resetStore]);
 
+    // Tangani trigger dari Hover Shortcut Header & Secondary Sidebar
     useEffect(() => {
-        if (
-            isAuthenticated &&
-            folders.length > 0 &&
-            selectedFolderId === null
-        ) {
-            setSelectedFolderId(folders[0].id);
+        if (activeQuickModal === "create-folder") {
+            setIsCreatingFolder(true);
+            triggerQuickModal(null);
+        } else if (activeQuickModal === "create-note") {
+            editorContainerRef.current?.scrollIntoView({ behavior: "smooth" });
+            triggerQuickModal(null);
         }
-    }, [isAuthenticated, folders, selectedFolderId, setSelectedFolderId]);
+    }, [activeQuickModal, triggerQuickModal]);
 
     if (!isAuthenticated) {
         return (
             <div className="flex flex-col items-center justify-center min-h-[60vh] px-4 text-center">
-                <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-600 mb-4">
-                    <Lock size={24} />
+                <div className="w-12 h-12 rounded-full bg-coral-soft flex items-center justify-center text-coral mb-4">
+                    <Lock size={22} />
                 </div>
-                <h3 className="text-lg font-bold text-slate-900 mb-1">
+                <h3 className="text-xl font-bold text-ink mb-1">
                     Workspace Catatan Pribadi
                 </h3>
-                <p className="text-sm text-slate-500 max-w-md mb-5">
+                <p className="text-xs text-ink-muted max-w-md mb-5">
                     Masuk ke akun Anda untuk melihat, membuat, dan mengelola
                     folder serta catatan pribadi Anda.
                 </p>
-                <button
-                    onClick={openLoginModal}
-                    className="px-5 py-2.5 bg-slate-900 text-white text-sm font-semibold rounded-xl hover:bg-slate-800 transition-colors"
-                >
+                <DsButton variant="coral" onClick={openLoginModal}>
                     Masuk / Daftar Akun
-                </button>
+                </DsButton>
             </div>
         );
     }
@@ -90,185 +95,89 @@ export default function Board() {
         fetchFolders();
     };
 
-    const handleDeleteFolder = async (
-        e: React.MouseEvent,
-        folderId: string,
-        folderName: string,
-    ) => {
-        e.stopPropagation();
-        if (
-            confirm(
-                `Delete folder "${folderName}"? Notes inside will not be deleted.`,
-            )
-        ) {
-            await deleteFolder(folderId);
-        }
-    };
-
     const pinnedNotes = notes.filter((n) => n.is_pinned);
     const otherNotes = notes.filter((n) => !n.is_pinned);
+    const currentFolder = folders.find((f) => f.id === selectedFolderId);
 
     return (
-        <div className="flex flex-col md:flex-row gap-6 px-4 py-4 md:px-7 md:py-6">
-            <main className="flex-1 space-y-6 w-full">
-                <div className="flex flex-col md:flex-row gap-4 items-start">
-                    {/* Folder Container */}
-                    <div className="w-full md:w-64 bg-white p-4 rounded-xl border border-slate-200 shrink-0">
-                        <div className="flex items-center justify-between mb-3">
-                            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-                                <Tag size={14} /> Folders
-                            </h3>
-                            <button
-                                onClick={() => setIsCreatingFolder(true)}
-                                className="p-1 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded"
-                                title="Add Folder"
-                            >
-                                <Plus size={16} />
-                            </button>
-                        </div>
+        <div className="space-y-6">
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+                <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-ink">
+                    {currentFolder ? currentFolder.name : "Notes & Scratchpad"}
+                </h1>
 
-                        <div className="flex md:flex-col overflow-x-auto md:overflow-x-hidden md:overflow-y-auto md:max-h-80 gap-2 md:gap-1 pb-2 md:pb-0 scrollbar-none pr-0 md:pr-1">
-                            {folders.map((folder: Folder) => (
-                                <div
-                                    key={folder.id}
-                                    onClick={() =>
-                                        setSelectedFolderId(
-                                            selectedFolderId === folder.id
-                                                ? null
-                                                : folder.id,
-                                        )
-                                    }
-                                    className={`group flex-none md:w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
-                                        selectedFolderId === folder.id
-                                            ? "bg-slate-900 text-white"
-                                            : "text-slate-600 hover:bg-slate-100 bg-slate-50 md:bg-transparent"
-                                    }`}
-                                >
-                                    <span className="flex items-center gap-2 truncate pr-2">
-                                        <span
-                                            className="w-2.5 h-2.5 rounded-full shrink-0"
-                                            style={{
-                                                backgroundColor:
-                                                    folder.color || "#94A3B8",
-                                            }}
-                                        />
-                                        <span className="truncate whitespace-nowrap md:whitespace-normal">
-                                            {folder.name}
-                                        </span>
-                                    </span>
-
-                                    <div className="flex items-center gap-1 shrink-0">
-                                        <button
-                                            onClick={(e) =>
-                                                handleDeleteFolder(
-                                                    e,
-                                                    folder.id,
-                                                    folder.name,
-                                                )
-                                            }
-                                            className={`p-1 rounded opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity ${
-                                                selectedFolderId === folder.id
-                                                    ? "text-slate-400 hover:text-red-400 hover:bg-slate-800"
-                                                    : "text-slate-400 hover:text-red-600 hover:bg-slate-200"
-                                            }`}
-                                            title="Delete Folder"
-                                        >
-                                            <Trash2 size={13} />
-                                        </button>
-
-                                        <span
-                                            className={`text-xs px-2 py-0.5 rounded-full font-semibold ${
-                                                selectedFolderId === folder.id
-                                                    ? "bg-slate-800 text-slate-200"
-                                                    : "bg-slate-200 md:bg-slate-100 text-slate-600"
-                                            }`}
-                                        >
-                                            {folder.notes_count || 0}
-                                        </span>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-
-                    <div className="flex-1 space-y-4 w-full">
-                        <NotebookEditor onSave={handleManualSaveNewNote} />
-
-                        <div className="relative">
-                            <Search
-                                className="absolute left-3.5 top-3 text-slate-400"
-                                size={18}
-                            />
-                            <input
-                                type="text"
-                                placeholder="Search in notes..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500"
-                            />
-                        </div>
-                    </div>
+                <div className="w-full md:w-72">
+                    <DsInput
+                        icon={<Search size={14} />}
+                        placeholder="Search in notes..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                    />
                 </div>
+            </div>
 
-                {isLoading && (
-                    <div className="flex justify-center py-12">
-                        <Loader2
-                            className="animate-spin text-blue-600"
-                            size={28}
-                        />
+            <div
+                ref={editorContainerRef}
+                className="bg-surface p-4 rounded-[24px] border border-line"
+            >
+                <NotebookEditor onSave={handleManualSaveNewNote} />
+            </div>
+
+            {isLoading && (
+                <div className="flex justify-center py-12">
+                    <Loader2 className="animate-spin text-coral" size={26} />
+                </div>
+            )}
+
+            {!isLoading && notes.length === 0 && (
+                <div className="text-center py-14 bg-surface rounded-[24px] border border-dashed border-line">
+                    <p className="text-ink-muted text-xs">
+                        No notes saved yet.
+                    </p>
+                </div>
+            )}
+
+            {!isLoading && pinnedNotes.length > 0 && (
+                <section className="space-y-2.5">
+                    <h4 className="text-xs font-bold text-ink-muted uppercase tracking-wider flex items-center gap-1">
+                        <Pin size={12} className="text-coral" /> Pinned
+                    </h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+                        {pinnedNotes.map((note) => (
+                            <NoteCard
+                                key={note.id}
+                                note={note}
+                                onClick={() => {
+                                    setActiveNote(note);
+                                    setIsEditorModalOpen(true);
+                                }}
+                            />
+                        ))}
                     </div>
-                )}
+                </section>
+            )}
 
-                {!isLoading && notes.length === 0 && (
-                    <div className="text-center py-12 md:py-16 bg-white rounded-xl border border-dashed border-slate-300">
-                        <p className="text-slate-500 text-sm">
-                            No notes saved yet.
-                        </p>
-                    </div>
-                )}
-
-                {!isLoading && pinnedNotes.length > 0 && (
-                    <section className="space-y-2">
-                        <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
-                            <Pin size={12} /> Pinned
+            {!isLoading && otherNotes.length > 0 && (
+                <section className="space-y-2.5">
+                    {pinnedNotes.length > 0 && (
+                        <h4 className="text-xs font-bold text-ink-muted uppercase tracking-wider">
+                            Others
                         </h4>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                            {pinnedNotes.map((note) => (
-                                <NoteCard
-                                    key={note.id}
-                                    note={note}
-                                    onClick={() => {
-                                        setActiveNote(note);
-                                        setIsEditorModalOpen(true);
-                                    }}
-                                />
-                            ))}
-                        </div>
-                    </section>
-                )}
-
-                {!isLoading && otherNotes.length > 0 && (
-                    <section className="space-y-2">
-                        {pinnedNotes.length > 0 && (
-                            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                                Others
-                            </h4>
-                        )}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                            {otherNotes.map((note) => (
-                                <NoteCard
-                                    key={note.id}
-                                    note={note}
-                                    onClick={() => {
-                                        setActiveNote(note);
-                                        setIsEditorModalOpen(true);
-                                    }}
-                                />
-                            ))}
-                        </div>
-                    </section>
-                )}
-            </main>
+                    )}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+                        {otherNotes.map((note) => (
+                            <NoteCard
+                                key={note.id}
+                                note={note}
+                                onClick={() => {
+                                    setActiveNote(note);
+                                    setIsEditorModalOpen(true);
+                                }}
+                            />
+                        ))}
+                    </div>
+                </section>
+            )}
 
             <Modal
                 isOpen={isEditorModalOpen}
@@ -301,10 +210,10 @@ export default function Board() {
                         setNewFolderName("");
                         setIsCreatingFolder(false);
                     }}
-                    className="space-y-4 pt-2"
+                    className="space-y-4 pt-1"
                 >
                     <div>
-                        <label className="block text-sm font-medium mb-1">
+                        <label className="block text-xs font-semibold text-ink mb-1">
                             Folder Name
                         </label>
                         <input
@@ -312,34 +221,31 @@ export default function Board() {
                             required
                             value={newFolderName}
                             onChange={(e) => setNewFolderName(e.target.value)}
-                            className="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                            className="w-full px-4 py-2 bg-surface border border-line rounded-full text-xs outline-none focus:bg-canvas focus:border-ink"
                         />
                     </div>
                     <div>
-                        <label className="block text-sm font-medium mb-1">
+                        <label className="block text-xs font-semibold text-ink mb-1">
                             Color
                         </label>
                         <input
                             type="color"
                             value={newFolderColor}
                             onChange={(e) => setNewFolderColor(e.target.value)}
-                            className="w-12 h-10 p-1 border rounded-lg cursor-pointer"
+                            className="w-11 h-10 p-1 border border-line rounded-xl cursor-pointer"
                         />
                     </div>
                     <div className="flex justify-end gap-2 pt-2">
-                        <button
+                        <DsButton
                             type="button"
+                            variant="secondary"
                             onClick={() => setIsCreatingFolder(false)}
-                            className="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg"
                         >
                             Cancel
-                        </button>
-                        <button
-                            type="submit"
-                            className="px-4 py-2 text-sm bg-slate-900 text-white rounded-lg"
-                        >
-                            Save
-                        </button>
+                        </DsButton>
+                        <DsButton type="submit" variant="coral">
+                            Save Folder
+                        </DsButton>
                     </div>
                 </form>
             </Modal>
